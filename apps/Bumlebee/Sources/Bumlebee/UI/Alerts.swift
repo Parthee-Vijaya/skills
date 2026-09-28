@@ -85,7 +85,7 @@ enum Prompts {
             ("Længste side 800 px", .maxSide(800)), ("Længste side 512 px", .maxSide(512)),
         ]
         let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
-        popup.addItems(withTitles: options.map(\.0) + ["Egen længste side …"])
+        popup.addItems(withTitles: options.map { $0.0 } + ["Egen længste side …"])
         popup.selectItem(at: 1)
         let field = NSTextField(string: "1600")
         field.placeholderString = "px"

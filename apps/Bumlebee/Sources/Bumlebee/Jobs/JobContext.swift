@@ -29,10 +29,10 @@ final class JobContext: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
     private var onCancel: [() -> Void] = []
-    private let report: (Double, String?) -> Void
+    private let report: @Sendable (Double, String?) -> Void
     private let range: ClosedRange<Double>
 
-    init(range: ClosedRange<Double> = 0...1, report: @escaping (Double, String?) -> Void) {
+    init(range: ClosedRange<Double> = 0...1, report: @escaping @Sendable (Double, String?) -> Void) {
         self.range = range
         self.report = report
     }

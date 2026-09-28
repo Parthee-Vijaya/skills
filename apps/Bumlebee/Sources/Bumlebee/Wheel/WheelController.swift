@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 final class WheelController {
     let model = WheelModel()
-    var onAction: ((WheelAction, [URL]) -> Void)?
+    var onAction: (@MainActor (WheelAction, [URL]) -> Void)?
     private var panel: WheelPanel?
     private var thumbnailRequest: QLThumbnailGenerator.Request?
 

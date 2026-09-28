@@ -365,7 +365,8 @@ struct ImageEditorView: View {
             Text("Format").font(.headline)
             let options: [(String, CGFloat?)] = [("Fri", nil), ("1:1", 1), ("4:3", 4 / 3), ("3:2", 3 / 2), ("16:9", 16 / 9), ("9:16", 9 / 16), ("4:5", 4 / 5)]
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 8) {
-                ForEach(options, id: \.0) { option in
+                ForEach(options.indices, id: \.self) { index in
+                    let option = options[index]
                     Button(option.0) { model.cropAspect = option.1; model.crop = nil }
                         .buttonStyle(.bordered)
                         .tint(model.cropAspect == option.1 ? Theme.honeyDeep : nil)

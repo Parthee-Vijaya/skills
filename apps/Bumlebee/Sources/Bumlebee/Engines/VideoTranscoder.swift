@@ -52,17 +52,25 @@ enum VideoTranscoder {
         reader.add(videoOutput)
 
         let fps = frameRate > 0 ? Double(frameRate) : 30
-        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: settings.codec,
-            AVVideoWidthKey: width,
-            AVVideoHeightKey: height,
-            AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,
-            AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: settings.videoBitrate,
-                AVVideoExpectedSourceFrameRateKey: Int(fps.rounded()),
-                AVVideoMaxKeyFrameIntervalKey: Int((fps * 2).rounded()),
-            ],
-        ])
+        func videoSettings(_ codec: AVVideoCodecType) -> [String: Any] {
+            [
+                AVVideoCodecKey: codec,
+                AVVideoWidthKey: width,
+                AVVideoHeightKey: height,
+                AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: settings.videoBitrate,
+                    AVVideoExpectedSourceFrameRateKey: Int(fps.rounded()),
+                    AVVideoMaxKeyFrameIntervalKey: Int((fps * 2).rounded()),
+                ],
+            ]
+        }
+        // Fall back to H.264 where no HEVC encoder is available (e.g. virtual machines).
+        var outputSettings = videoSettings(settings.codec)
+        if !writer.canApply(outputSettings: outputSettings, forMediaType: .video) {
+            outputSettings = videoSettings(.h264)
+        }
+        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: outputSettings)
         videoInput.transform = transform
         videoInput.expectsMediaDataInRealTime = false
         writer.add(videoInput)

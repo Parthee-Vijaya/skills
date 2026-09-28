@@ -155,7 +155,7 @@ enum Actions {
     }
 
     /// Runs the same operation on every file as one job with shared progress.
-    private static func each(_ urls: [URL], title: String, operation: @escaping (URL, JobContext) async throws -> [URL]) {
+    private static func each(_ urls: [URL], title: String, operation: @escaping @Sendable (URL, JobContext) async throws -> [URL]) {
         JobRunner.shared.run(title: title, files: urls) { context in
             var outputs: [URL] = []
             for (index, url) in urls.enumerated() {

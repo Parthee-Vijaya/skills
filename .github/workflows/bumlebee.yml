@@ -23,6 +23,14 @@ jobs:
         run: swift --version
       - name: Build
         run: swift build -c release
+      - name: Install ffmpeg (optional engine)
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install ffmpeg || echo "ffmpeg not installed; ffmpeg checks will be skipped"
+      - name: Self-test engines
+        timeout-minutes: 15
+        run: .build/release/Bumlebee --selftest "$RUNNER_TEMP/bumlebee-selftest"
       - name: Bundle app
         run: ./Scripts/build-app.sh
       - uses: actions/upload-artifact@v4

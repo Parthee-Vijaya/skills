@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class JobProgressModel: ObservableObject {
+final class JobProgressModel: ObservableObject, @unchecked Sendable {
     @Published var title: String
     @Published var detail: String
     @Published var fraction: Double = 0
@@ -20,10 +20,10 @@ final class JobRunner {
     static let shared = JobRunner()
     private var panels: [ProgressPanel] = []
 
-    func run(title: String, files: [URL], work: @escaping (JobContext) async throws -> [URL]) {
+    func run(title: String, files: [URL], work: @escaping @Sendable (JobContext) async throws -> [URL]) {
         let model = JobProgressModel(title: title, detail: files.count == 1 ? files[0].lastPathComponent : "\(files.count) filer")
         let panel = ProgressPanel(model: model)
-        let context = JobContext { fraction, status in
+        let context = JobContext { @Sendable fraction, status in
             DispatchQueue.main.async {
                 if fraction >= 0 { model.fraction = fraction }
                 if let status { model.detail = status }

@@ -8,9 +8,9 @@ import AppKit
 /// polls, so pressing Shift mid-drag works even if the pointer is standing still.
 @MainActor
 final class DragMonitor {
-    var onShow: ((_ urls: [URL], _ mode: WheelMode, _ location: NSPoint) -> Void)?
-    var onModeChange: ((WheelMode) -> Void)?
-    var onDragEnded: (() -> Void)?
+    var onShow: (@MainActor (_ urls: [URL], _ mode: WheelMode, _ location: NSPoint) -> Void)?
+    var onModeChange: (@MainActor (WheelMode) -> Void)?
+    var onDragEnded: (@MainActor () -> Void)?
 
     private var monitors: [Any] = []
     private var timer: Timer?
