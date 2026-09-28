@@ -98,7 +98,7 @@ enum ImageEngine {
         }
         var output = image
         if !supportsAlpha(format), hasAlpha(image) { output = flattened(image) }
-        if format == .ico, max(output.width, output.height) > 256 { output = scaled(output, maxSide: 256) }
+        if format == .ico { output = iconCanvas(output) }
 
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil) else {
             throw BumlebeeError.failed("Kunne ikke oprette \(url.lastPathComponent).")
@@ -153,14 +153,25 @@ enum ImageEngine {
         return output
     }
 
-    /// For formats ImageIO cannot write: decode natively (so HEIC, RAW and SVG work), then let ffmpeg encode.
-    static func convertViaFFmpeg(_ url: URL, to format: Format, context: JobContext) async throws -> URL {
+    /// For formats ImageIO cannot write (WebP, AVIF): decode natively, so HEIC, RAW and SVG inputs work,
+    /// then encode with ffmpeg or, if its build lacks the encoder, with cwebp/avifenc.
+    static func convertExternally(_ url: URL, to format: Format, context: JobContext) async throws -> URL {
         let temp = try Output.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: temp) }
         let png = temp.appendingPathComponent("frame.png")
         try write(try loadImage(url), to: png, format: .png)
         let output = Output.url(for: url, ext: format.fileExtension)
-        try await FFmpeg.convert(png, to: output, arguments: FFmpeg.arguments(for: format, from: .image), context: context)
+        let quality = Int(Prefs.imageQuality * 100)
+        if FFmpeg.isAvailable, let arguments = FFmpeg.arguments(for: format, from: .image) {
+            try await FFmpeg.convert(png, to: output, arguments: arguments, context: context)
+        } else if format == .webp, let cwebp = ExternalTool.path("cwebp") {
+            try await ProcessRunner.check(cwebp, ["-quiet", "-q", "\(quality)", "-alpha_q", "100", png.path, "-o", output.path], context: context)
+        } else if format == .avif, let avifenc = ExternalTool.path("avifenc") {
+            try await ProcessRunner.check(avifenc, ["-q", "\(quality)", "-s", "6", png.path, output.path], context: context)
+        } else {
+            throw BumlebeeError.unsupported(Converter.missingEncoderReason(for: format))
+        }
+        context.progress(1)
         return output
     }
 
@@ -383,6 +394,17 @@ enum ImageEngine {
         let scale = min(size.width / CGFloat(image.width), size.height / CGFloat(image.height))
         let drawSize = CGSize(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
         context.draw(image, in: CGRect(x: (size.width - drawSize.width) / 2, y: (size.height - drawSize.height) / 2, width: drawSize.width, height: drawSize.height))
+        return context.makeImage() ?? image
+    }
+
+    /// Icons must be square and at most 256 px, so the image is centred on a transparent 256 px canvas.
+    static func iconCanvas(_ image: CGImage) -> CGImage {
+        let side: CGFloat = 256
+        guard let context = makeContext(width: Int(side), height: Int(side)) else { return image }
+        context.interpolationQuality = .high
+        let scale = min(side / CGFloat(image.width), side / CGFloat(image.height))
+        let size = CGSize(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
+        context.draw(image, in: CGRect(x: (side - size.width) / 2, y: (side - size.height) / 2, width: size.width, height: size.height))
         return context.makeImage() ?? image
     }
 

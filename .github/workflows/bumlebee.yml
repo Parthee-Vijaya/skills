@@ -27,7 +27,7 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
-        run: brew install ffmpeg || echo "ffmpeg not installed; ffmpeg checks will be skipped"
+        run: brew install ffmpeg webp libavif || echo "Optional encoders not installed; those checks will be skipped"
       - name: Self-test engines
         timeout-minutes: 15
         run: .build/release/Bumlebee --selftest "$RUNNER_TEMP/bumlebee-selftest"

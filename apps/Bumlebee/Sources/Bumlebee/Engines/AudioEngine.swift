@@ -2,7 +2,8 @@
 
 /// Audio conversion and processing. Everything flows through one decode → (gain) → encode pipeline:
 /// AVAssetReader decodes any track AVFoundation can open (including a video's soundtrack) to float PCM,
-/// and AVAudioFile encodes it to AAC, WAV, AIFF, CAF or FLAC.
+/// AVAudioFile writes WAV, AIFF, CAF or FLAC, and AAC goes through AVAssetWriter, which, unlike
+/// AVAudioFile, honours the requested bitrate.
 enum AudioEngine {
     /// Formats the pipeline can write.
     static let writable: Set<Format> = [.m4a, .wav, .aiff, .caf, .flac]
@@ -94,6 +95,17 @@ enum AudioEngine {
         if format == .m4a { rate = min(rate, 48_000) }
         let channelCount = max(1, min(channels ?? info.channels, 2))
 
+        if format == .m4a {
+            let temp = try Output.temporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: temp) }
+            let pcm = temp.appendingPathComponent("pcm.caf")
+            try await process(inputs, to: pcm, format: .caf, channels: channelCount, sampleRate: rate,
+                              timeRange: timeRange, gain: gain, context: context.step(0, of: 2))
+            try await encodeAAC(pcm, to: output, sampleRate: rate, channels: channelCount,
+                                bitrate: bitrate ?? 192_000, context: context.step(1, of: 2))
+            return
+        }
+
         var totalSeconds = 0.0
         for input in inputs {
             if let timeRange {
@@ -176,6 +188,70 @@ enum AudioEngine {
             throw reader.error ?? BumlebeeError.failed("Kunne ikke læse \(url.lastPathComponent).")
         }
         return position
+    }
+
+    /// Encodes a PCM file to AAC in M4A at an exact bitrate.
+    static func encodeAAC(_ input: URL, to output: URL, sampleRate: Double, channels: Int, bitrate: Int, context: JobContext) async throws {
+        let asset = AVURLAsset(url: input)
+        guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
+            throw BumlebeeError.failed("Ingen lyd at kode.")
+        }
+        let duration = try await asset.load(.duration).seconds
+        let reader = try AVAssetReader(asset: asset)
+        let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ])
+        readerOutput.alwaysCopiesSampleData = false
+        reader.add(readerOutput)
+
+        let writer = try AVAssetWriter(outputURL: output, fileType: .m4a)
+        // AAC only accepts certain bitrates for a given rate and channel count; step down until one fits.
+        let limit = channels == 1 ? 160_000 : 320_000
+        let candidates = [min(max(bitrate, 16_000), limit), 128_000, 96_000, 64_000]
+        guard let settings = candidates.lazy.map({ rate -> [String: Any] in
+            [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: sampleRate, AVNumberOfChannelsKey: channels, AVEncoderBitRateKey: rate]
+        }).first(where: { writer.canApply(outputSettings: $0, forMediaType: .audio) }) else {
+            throw BumlebeeError.failed("AAC-koderen accepterer ikke disse indstillinger.")
+        }
+        let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
+        writerInput.expectsMediaDataInRealTime = false
+        writer.add(writerInput)
+
+        guard reader.startReading() else { throw reader.error ?? BumlebeeError.failed("Kunne ikke læse lyden.") }
+        guard writer.startWriting() else { throw writer.error ?? BumlebeeError.failed("Kunne ikke skrive lyden.") }
+        writer.startSession(atSourceTime: .zero)
+        context.whenCancelled {
+            reader.cancelReading()
+            writer.cancelWriting()
+        }
+        do {
+            while let sample = readerOutput.copyNextSampleBuffer() {
+                while !writerInput.isReadyForMoreMediaData {
+                    try context.checkCancelled()
+                    try await Task.sleep(nanoseconds: 2_000_000)
+                }
+                guard writerInput.append(sample) else {
+                    throw writer.error ?? BumlebeeError.failed("AAC-kodningen fejlede.")
+                }
+                if duration > 0 { context.progress(CMSampleBufferGetPresentationTimeStamp(sample).seconds / duration) }
+            }
+            try context.checkCancelled()
+            if reader.status == .failed { throw reader.error ?? BumlebeeError.failed("Kunne ikke læse lyden.") }
+            writerInput.markAsFinished()
+            await writer.finishWriting()
+            guard writer.status == .completed else {
+                throw writer.error ?? BumlebeeError.failed("AAC-filen kunne ikke gemmes.")
+            }
+        } catch {
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: output)
+            throw error
+        }
+        context.progress(1)
     }
 
     static func peakLevel(_ url: URL, context: JobContext) async throws -> Float {

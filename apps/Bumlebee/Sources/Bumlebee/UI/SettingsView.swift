@@ -46,7 +46,7 @@ struct SettingsView: View {
             }
 
             Section("ffmpeg (valgfrit)") {
-                Text("macOS kan selv klare de fleste formater. MP3, OGG, Opus, MKV, WebM, AVI, WMV samt WebP og AVIF kræver ffmpeg.")
+                Text("macOS kan selv klare de fleste formater. MP3, OGG, Opus, MKV, WebM, AVI og WMV kræver ffmpeg. WebP og AVIF laves med ffmpeg eller med cwebp/avifenc.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 LabeledContent("Status") {
@@ -59,7 +59,7 @@ struct SettingsView: View {
                 HStack {
                     Button("Kopiér installationskommando") {
                         NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("brew install ffmpeg", forType: .string)
+                        NSPasteboard.general.setString("brew install ffmpeg webp libavif", forType: .string)
                     }
                     Button("Vælg ffmpeg …") { chooseFFmpeg() }
                     Button("Søg igen") { detectedFFmpeg = FFmpeg.path }

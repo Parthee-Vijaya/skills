@@ -1,7 +1,7 @@
 import Foundation
 
 enum Availability {
-    case native, ffmpeg, unavailable(String)
+    case native, external, unavailable(String)
 
     var disabledReason: String? {
         if case .unavailable(let reason) = self { return reason }
@@ -28,7 +28,7 @@ enum Converter {
             let availability = Self.availability(of: format, for: url)
             switch availability {
             case .unavailable: return availability
-            case .ffmpeg: result = .ffmpeg
+            case .external: result = .external
             case .native: break
             }
         }
@@ -39,7 +39,9 @@ enum Converter {
         let kind = FileKind.of(url)
         if canConvertNatively(url, kind: kind, to: format) { return .native }
         if ffmpegCanConvert(kind: kind, to: format) {
-            return FFmpeg.isAvailable ? .ffmpeg : .unavailable("\(format.label) kræver ffmpeg. Installér med: brew install ffmpeg")
+            if FFmpeg.isAvailable, FFmpeg.arguments(for: format, from: kind) != nil { return .external }
+            if kind == .image, ExternalTool.imageEncoder(for: format) != nil { return .external }
+            return .unavailable(missingEncoderReason(for: format))
         }
         return .unavailable("\(kind.displayName) kan ikke konverteres til \(format.label).")
     }
@@ -63,6 +65,19 @@ enum Converter {
         case .archive, .folder, .other:
             return [.zip, .tar, .tgz, .gz].contains(format)
         }
+    }
+
+    static func missingEncoderReason(for format: Format) -> String {
+        let tool: String
+        switch format {
+        case .webp: tool = "brew install webp"
+        case .avif: tool = "brew install libavif"
+        default: tool = "brew install ffmpeg"
+        }
+        if FFmpeg.isAvailable, format != .webp, format != .avif {
+            return "Din ffmpeg kan ikke lave \(format.label). Installér en udgave med den encoder."
+        }
+        return "\(format.label) kræver et ekstra værktøj. Installér med: \(tool)"
     }
 
     static func ffmpegCanConvert(kind: FileKind, to format: Format) -> Bool {
@@ -107,10 +122,13 @@ enum Converter {
             throw BumlebeeError.unsupported("\(url.lastPathComponent) kan ikke konverteres til \(format.label).")
         }
         if kind == .image {
-            return [try await ImageEngine.convertViaFFmpeg(url, to: format, context: context)]
+            return [try await ImageEngine.convertExternally(url, to: format, context: context)]
+        }
+        guard let arguments = FFmpeg.arguments(for: format, from: kind) else {
+            throw BumlebeeError.unsupported(missingEncoderReason(for: format))
         }
         let output = Output.url(for: url, ext: format.fileExtension)
-        try await FFmpeg.convert(url, to: output, arguments: FFmpeg.arguments(for: format, from: kind), context: context)
+        try await FFmpeg.convert(url, to: output, arguments: arguments, context: context)
         return [output]
     }
 }

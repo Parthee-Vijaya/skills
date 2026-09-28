@@ -57,7 +57,7 @@ enum Markdown {
         if inCode { html.append("</code></pre>") }
         return """
         <html><head><meta charset="utf-8"><style>
-        body { font-family: -apple-system, Helvetica; font-size: 12pt; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12pt; }
         code, pre { font-family: Menlo, monospace; font-size: 10.5pt; }
         </style></head><body>\(html.joined(separator: "\n"))</body></html>
         """

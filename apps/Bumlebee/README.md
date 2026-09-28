@@ -34,7 +34,7 @@ Alt foregår lokalt på din Mac. Bumlebee sender ingen filer nogen steder hen.
 | Arkiver (ZIP, TAR, TAR.GZ, RAR, 7Z …) | ZIP, TAR.GZ, TAR |
 | Alt andet, også mapper | ZIP, GZIP, TAR.GZ, TAR |
 
-\* kræver [ffmpeg](#ffmpeg-valgfrit). Formater, der mangler ffmpeg, vises med en lås i hjulet.
+\* kræver [ffmpeg eller cwebp/avifenc](#ffmpeg-valgfrit). Formater, der mangler et værktøj, vises med en lås i hjulet.
 
 ### Værktøjer (⌥⇧)
 
@@ -68,13 +68,13 @@ xattr -dr com.apple.quarantine /Applications/Bumlebee.app
 
 ## ffmpeg (valgfrit)
 
-macOS klarer selv de fleste formater. MP3, OGG, Opus, MKV, WebM, AVI og WMV samt WebP- og AVIF-output kræver ffmpeg:
+macOS klarer selv de fleste formater. MP3, OGG, Opus, MKV, WebM, AVI og WMV kræver ffmpeg, og WebP og AVIF laves med ffmpeg eller med `cwebp`/`avifenc`:
 
 ```bash
-brew install ffmpeg
+brew install ffmpeg webp libavif
 ```
 
-Bumlebee finder selv ffmpeg i `/opt/homebrew/bin`, `/usr/local/bin` og `/opt/local/bin`. Du kan også vælge stien under *Indstillinger*. Vil du have en app, der klarer sig helt selv, kan du bygge med en statisk ffmpeg indbygget:
+Bumlebee spørger selv ffmpeg, hvilke encodere den har, og vælger ud fra det. Homebrews ffmpeg har for eksempel hverken libwebp, libvorbis eller libaom, så OGG laves med Opus, WebP med `cwebp` og AVIF med `avifenc`. Programmerne findes i `/opt/homebrew/bin`, `/usr/local/bin` og `/opt/local/bin`, og stien til ffmpeg kan vælges under *Indstillinger*. Vil du have en app, der klarer sig helt selv, kan du bygge med en statisk ffmpeg indbygget:
 
 ```bash
 FFMPEG_PATH=/sti/til/ffmpeg ./Scripts/build-app.sh
@@ -86,6 +86,14 @@ FFMPEG_PATH=/sti/til/ffmpeg ./Scripts/build-app.sh
 - Vis resultatet i Finder, og afspil en lyd, når et job er færdigt.
 - Standardkvalitet for JPEG, HEIC og WebP.
 - Start ved login, og sæt Bumlebee på pause.
+
+## Test
+
+`Bumlebee --selftest <mappe>` laver testfiler (billeder, lyd, video, dokumenter, undertekster og en mappe) og kører alle motorerne på dem. Bagefter tjekker den resultaterne: størrelser, varigheder, sideantal og lydniveau. GitHub-workflowet `Bumlebee` bygger appen og kører self-testen på macOS for hver ændring.
+
+```bash
+swift build -c release && .build/release/Bumlebee --selftest /tmp/bumlebee-test
+```
 
 ## Sådan er den bygget
 
