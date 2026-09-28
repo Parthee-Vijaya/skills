@@ -1,0 +1,39 @@
+name: Bumlebee
+
+on:
+  push:
+    paths:
+      - "apps/Bumlebee/**"
+      - ".github/workflows/bumlebee.yml"
+  pull_request:
+    paths:
+      - "apps/Bumlebee/**"
+      - ".github/workflows/bumlebee.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/Bumlebee
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Build
+        run: swift build -c release
+      - name: Install ffmpeg (optional engine)
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install ffmpeg webp libavif || echo "Optional encoders not installed; those checks will be skipped"
+      - name: Self-test engines
+        timeout-minutes: 15
+        run: .build/release/Bumlebee --selftest "$RUNNER_TEMP/bumlebee-selftest"
+      - name: Bundle app
+        run: ./Scripts/build-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bumlebee.app
+          path: apps/Bumlebee/build/Bumlebee.zip
