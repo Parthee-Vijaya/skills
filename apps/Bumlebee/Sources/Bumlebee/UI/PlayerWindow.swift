@@ -1,4 +1,4 @@
-import AVKit
+@preconcurrency import AVKit
 import SwiftUI
 
 /// A player with trimming, snapshots and splitting, for video and audio.

@@ -17,6 +17,13 @@ enum BumlebeeError: LocalizedError {
     }
 }
 
+extension Error {
+    var isCancellation: Bool {
+        if let error = self as? BumlebeeError, case .cancelled = error { return true }
+        return false
+    }
+}
+
 /// Passed to every job so engines can report progress, check for cancellation and name their output.
 final class JobContext: @unchecked Sendable {
     private let lock = NSLock()

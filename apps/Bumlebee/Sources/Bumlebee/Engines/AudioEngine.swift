@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// Audio conversion and processing. Everything flows through one decode → (gain) → encode pipeline:
 /// AVAssetReader decodes any track AVFoundation can open (including a video's soundtrack) to float PCM,

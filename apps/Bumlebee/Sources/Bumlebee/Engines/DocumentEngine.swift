@@ -26,7 +26,7 @@ enum DocumentEngine {
             else { return NSAttributedString(string: markdown) }
             return text
         case "txt", "text", "srt", "vtt":
-            let string = (try? String(contentsOf: url, encoding: .utf8)) ?? (try String(contentsOf: url, encoding: .isoLatin1))
+            let string = try (try? String(contentsOf: url, encoding: .utf8)) ?? String(contentsOf: url, encoding: .isoLatin1)
             return NSAttributedString(string: string, attributes: [.font: NSFont.systemFont(ofSize: 12)])
         default:
             return try NSAttributedString(url: url, options: [:], documentAttributes: nil)

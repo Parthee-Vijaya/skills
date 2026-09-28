@@ -9,7 +9,7 @@ enum SubtitleEngine {
     }
 
     static func parse(_ url: URL) throws -> [Cue] {
-        let raw = (try? String(contentsOf: url, encoding: .utf8)) ?? (try String(contentsOf: url, encoding: .isoLatin1))
+        let raw = try (try? String(contentsOf: url, encoding: .utf8)) ?? String(contentsOf: url, encoding: .isoLatin1)
         let normalized = raw.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
         var cues: [Cue] = []
         for block in normalized.components(separatedBy: "\n\n") {

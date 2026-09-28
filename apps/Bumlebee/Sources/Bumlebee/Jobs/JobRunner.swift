@@ -55,7 +55,7 @@ final class JobRunner {
         panels.removeAll { $0 === panel }
 
         if let error {
-            if case BumlebeeError.cancelled = error { return }
+            if error.isCancellation { return }
             Alerts.error(title: "\(model.title) mislykkedes", message: error.localizedDescription)
             return
         }

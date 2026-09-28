@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// Thin async wrapper around AVAssetExportSession with progress and cancellation.
 enum MediaExport {

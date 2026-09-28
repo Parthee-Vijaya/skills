@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// Re-encodes video with an explicit bitrate and size, which AVAssetExportSession presets cannot do.
 /// Used for "compress" and "aim for an exact file size".
