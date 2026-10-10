@@ -1,0 +1,9 @@
+{
+  "name": "rea-panel",
+  "version": "0.1.0",
+  "description": "REA (Reverse Engineer Anything) in Claude Code: starts REA's MCP server, bundles its workflow skill, and shows every REA tool call live in a side panel while it works.",
+  "author": { "name": "parthee-vijaya" },
+  "homepage": "https://github.com/morluto/rea",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
