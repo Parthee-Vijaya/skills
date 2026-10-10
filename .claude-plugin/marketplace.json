@@ -1,0 +1,14 @@
+{
+  "name": "parthee-vijaya-skills",
+  "owner": {
+    "name": "Parthee-Vijaya"
+  },
+  "description": "Claude Code plugins from Parthee-Vijaya/skills.",
+  "plugins": [
+    {
+      "name": "rea-panel",
+      "source": "./plugins/rea-panel",
+      "description": "REA (Reverse Engineer Anything) in Claude Code: REA's MCP server and workflow skill, plus a live side panel of every REA tool call."
+    }
+  ]
+}
